@@ -1,0 +1,24 @@
+# Ignore macOS system files
+.DS_Store
+**/.DS_Store
+
+# Ignore Python bytecode directories
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# Virtual Environment & Python Tooling
+.venv/
+.python-version
+uv.lock
+
+# Logs
+*.log
+**/*.log
+
+# Project-specific ignores
+NST_Code/static/uploads/*
+!NST_Code/static/uploads/.gitkeep
+NST_Code/experiment/experiment1/
+NST_Code/experiment/final_exp/sample_iter_*.png
+
