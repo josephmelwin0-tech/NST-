@@ -5,28 +5,40 @@ from PIL import Image
 import os
 import sys
 
+# Try importing Hugging Face Spaces for ZeroGPU support
+try:
+    import spaces
+    has_spaces = True
+except ImportError:
+    has_spaces = False
+
 # Add root folder to sys.path so we can import modules
 sys.path.append(os.path.join(os.path.dirname(__file__), 'NST_Code'))
 
 from utils.models import VGGEncoder, Decoder
 from utils.utils import adaptive_instance_normalization
 
-# Device setup
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# Load models
+# Load models globally on CPU at startup
 vgg_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'NST_Code', 'vgg_normalised.pth'))
 decoder_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'NST_Code', 'experiment', 'final_exp', 'decoder_final.pth'))
 
-encoder = VGGEncoder(vgg_path).to(device)
-decoder = Decoder().to(device)
-decoder.load_state_dict(torch.load(decoder_path, map_location=device))
+encoder = VGGEncoder(vgg_path).to("cpu")
+decoder = Decoder().to("cpu")
+decoder.load_state_dict(torch.load(decoder_path, map_location="cpu"))
 encoder.eval()
 decoder.eval()
 
-def transfer_style(content_img, style_img, alpha):
+# Implementation function for style transfer
+def _transfer_style_impl(content_img, style_img, alpha):
     if content_img is None or style_img is None:
         return None
+    
+    # Detect running device dynamically (cuda inside @spaces.GPU context)
+    run_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    # Lazily move models to the current execution device
+    encoder.to(run_device)
+    decoder.to(run_device)
     
     # Preprocessing
     content_transform = transforms.Compose([
@@ -38,8 +50,8 @@ def transfer_style(content_img, style_img, alpha):
         transforms.ToTensor()
     ])
     
-    content_tensor = content_transform(content_img).unsqueeze(0).to(device)
-    style_tensor = style_transform(style_img).unsqueeze(0).to(device)
+    content_tensor = content_transform(content_img).unsqueeze(0).to(run_device)
+    style_tensor = style_transform(style_img).unsqueeze(0).to(run_device)
     
     with torch.no_grad():
         content_feats = encoder(content_tensor, is_test=True)
@@ -55,6 +67,16 @@ def transfer_style(content_img, style_img, alpha):
         output_img = transforms.ToPILImage()(output_tensor)
         
     return output_img
+
+# Wrap with ZeroGPU decorator if spaces is available
+if has_spaces:
+    @spaces.GPU
+    def transfer_style(content_img, style_img, alpha):
+        return _transfer_style_impl(content_img, style_img, alpha)
+else:
+    def transfer_style(content_img, style_img, alpha):
+        return _transfer_style_impl(content_img, style_img, alpha)
+
 
 # Set up clean theme
 theme = gr.themes.Soft(
