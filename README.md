@@ -1,4 +1,16 @@
+---
+title: StyleForge AI
+emoji: 🎨
+colorFrom: indigo
+colorTo: pink
+sdk: gradio
+sdk_version: 4.26.0
+app_file: app.py
+pinned: false
+---
+
 # Real-Time Arbitrary Style Transfer using Adaptive Instance Normalization
+
 
 This repository contains a PyTorch implementation and a Flask-based web application for real-time arbitrary style transfer. The system is based on the Adaptive Instance Normalization (AdaIN) framework, which enables transferring arbitrary visual styles onto content images in real-time.
 
